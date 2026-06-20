@@ -1,0 +1,74 @@
+# yii3-audit-log-db
+
+## Install
+
+```bash
+composer require rasuvaeff/yii3-audit-log rasuvaeff/yii3-audit-log-db
+```
+
+## Rules
+
+- Backend adapter only: provides no standalone functionality without `rasuvaeff/yii3-audit-log`.
+- Binds `AuditWriter` to `DbAuditWriter` via config-plugin DI — do NOT also bind it in the core or app.
+- `DbAuditWriter::write()` is append-only (INSERT). Audit rows are immutable.
+- `changes` column: JSON array `[{"field":"x","old":…,"new":…}]`.
+- `occurred_at` stored as `Y-m-d H:i:s` UTC regardless of input timezone.
+- Table name validated: `/^[A-Za-z_]\w*(\.[A-Za-z_]\w*)?$/`.
+- Must run migration `M260620000000CreateAuditLogTable` before first write.
+
+## API reference
+
+### DbAuditWriter
+
+```php
+use Rasuvaeff\Yii3AuditLogDb\DbAuditWriter;
+use Yiisoft\Db\Connection\ConnectionInterface;
+
+$writer = new DbAuditWriter(
+    db: $db,              // ConnectionInterface — required
+    table: 'audit_log',   // non-empty-string — optional, default 'audit_log'
+);
+$writer->write(event: $auditEvent);  // implements AuditWriter
+```
+
+### Migration
+
+```php
+// Register in your migration runner:
+// vendor/rasuvaeff/yii3-audit-log-db/migrations/M260620000000CreateAuditLogTable.php
+
+// Custom table name:
+M260620000000CreateAuditLogTable::class => [
+    '__construct()' => ['table' => 'my_audit_log'],
+],
+```
+
+### Config-plugin params
+
+```php
+'rasuvaeff/yii3-audit-log-db' => [
+    'table' => 'audit_log',  // default
+],
+```
+
+### Full stack with AuditLogger
+
+```php
+use Rasuvaeff\Yii3AuditLog\AuditActor;
+use Rasuvaeff\Yii3AuditLog\AuditChangeSet;
+use Rasuvaeff\Yii3AuditLog\AuditLogger;
+use Rasuvaeff\Yii3AuditLog\AuditSubject;
+use Rasuvaeff\Yii3AuditLogDb\DbAuditWriter;
+
+$writer = new DbAuditWriter(db: $db);
+$logger = new AuditLogger(writer: $writer, clock: $clock);
+
+$logger->logChange(
+    actor: AuditActor::user(id: '42', name: 'Alice'),
+    subject: AuditSubject::of(type: 'order', id: '100'),
+    changes: AuditChangeSet::fromArrays(
+        old: ['status' => 'new'],
+        new: ['status' => 'paid'],
+    ),
+);
+```
