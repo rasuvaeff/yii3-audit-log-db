@@ -5,20 +5,20 @@ declare(strict_types=1);
 namespace Rasuvaeff\Yii3AuditLogDb\Tests;
 
 use DateTimeImmutable;
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
 use Rasuvaeff\Yii3AuditLog\AuditActor;
 use Rasuvaeff\Yii3AuditLog\AuditChangeSet;
 use Rasuvaeff\Yii3AuditLog\AuditEvent;
 use Rasuvaeff\Yii3AuditLog\AuditMetadata;
 use Rasuvaeff\Yii3AuditLog\AuditSubject;
 use Rasuvaeff\Yii3AuditLogDb\AuditEventSerializer;
+use Testo\Assert;
+use Testo\Codecov\Covers;
+use Testo\Test;
 
-#[CoversClass(AuditEventSerializer::class)]
-final class AuditEventSerializerTest extends TestCase
+#[Test]
+#[Covers(AuditEventSerializer::class)]
+final class AuditEventSerializerTest
 {
-    #[Test]
     public function serializesAllScalarFields(): void
     {
         $event = new AuditEvent(
@@ -33,20 +33,19 @@ final class AuditEventSerializerTest extends TestCase
 
         $row = AuditEventSerializer::serialize(event: $event);
 
-        $this->assertSame('abc123', $row['id']);
-        $this->assertSame('user', $row['actor_type']);
-        $this->assertSame('u1', $row['actor_id']);
-        $this->assertSame('Alice', $row['actor_name']);
-        $this->assertSame('update', $row['action']);
-        $this->assertSame('order', $row['subject_type']);
-        $this->assertSame('42', $row['subject_id']);
-        $this->assertSame('2026-06-20 10:00:00', $row['occurred_at']);
-        $this->assertSame('req-1', $row['request_id']);
-        $this->assertSame('127.0.0.1', $row['ip']);
-        $this->assertSame('Test/1.0', $row['user_agent']);
+        Assert::same($row['id'], 'abc123');
+        Assert::same($row['actor_type'], 'user');
+        Assert::same($row['actor_id'], 'u1');
+        Assert::same($row['actor_name'], 'Alice');
+        Assert::same($row['action'], 'update');
+        Assert::same($row['subject_type'], 'order');
+        Assert::same($row['subject_id'], '42');
+        Assert::same($row['occurred_at'], '2026-06-20 10:00:00');
+        Assert::same($row['request_id'], 'req-1');
+        Assert::same($row['ip'], '127.0.0.1');
+        Assert::same($row['user_agent'], 'Test/1.0');
     }
 
-    #[Test]
     public function serializesChangesAsJsonArray(): void
     {
         $event = new AuditEvent(
@@ -65,13 +64,12 @@ final class AuditEventSerializerTest extends TestCase
         /** @var list<array{field: string, old: mixed, new: mixed}> $changes */
         $changes = json_decode((string) $row['changes'], associative: true, flags: JSON_THROW_ON_ERROR);
 
-        $this->assertCount(2, $changes);
+        Assert::count($changes, 2);
         $fields = array_column($changes, 'field');
-        $this->assertContains('name', $fields);
-        $this->assertContains('age', $fields);
+        Assert::true(in_array('name', $fields, true));
+        Assert::true(in_array('age', $fields, true));
     }
 
-    #[Test]
     public function serializesEmptyChangeSetAsEmptyJsonArray(): void
     {
         $event = new AuditEvent(
@@ -85,10 +83,9 @@ final class AuditEventSerializerTest extends TestCase
 
         $row = AuditEventSerializer::serialize(event: $event);
 
-        $this->assertSame('[]', $row['changes']);
+        Assert::same($row['changes'], '[]');
     }
 
-    #[Test]
     public function serializesSystemActorWithNullIds(): void
     {
         $event = new AuditEvent(
@@ -102,12 +99,11 @@ final class AuditEventSerializerTest extends TestCase
 
         $row = AuditEventSerializer::serialize(event: $event);
 
-        $this->assertSame('system', $row['actor_type']);
-        $this->assertNull($row['actor_id']);
-        $this->assertNull($row['actor_name']);
+        Assert::same($row['actor_type'], 'system');
+        Assert::null($row['actor_id']);
+        Assert::null($row['actor_name']);
     }
 
-    #[Test]
     public function serializesNullMetadataAsNullColumns(): void
     {
         $event = new AuditEvent(
@@ -121,12 +117,11 @@ final class AuditEventSerializerTest extends TestCase
 
         $row = AuditEventSerializer::serialize(event: $event);
 
-        $this->assertNull($row['request_id']);
-        $this->assertNull($row['ip']);
-        $this->assertNull($row['user_agent']);
+        Assert::null($row['request_id']);
+        Assert::null($row['ip']);
+        Assert::null($row['user_agent']);
     }
 
-    #[Test]
     public function normalizesOccurredAtToUtc(): void
     {
         $event = new AuditEvent(
@@ -140,10 +135,9 @@ final class AuditEventSerializerTest extends TestCase
 
         $row = AuditEventSerializer::serialize(event: $event);
 
-        $this->assertSame('2026-06-20 10:00:00', $row['occurred_at']);
+        Assert::same($row['occurred_at'], '2026-06-20 10:00:00');
     }
 
-    #[Test]
     public function serializesChangeFieldValues(): void
     {
         $event = new AuditEvent(
@@ -162,8 +156,8 @@ final class AuditEventSerializerTest extends TestCase
         /** @var list<array{field: string, old: mixed, new: mixed}> $changes */
         $changes = json_decode((string) $row['changes'], associative: true, flags: JSON_THROW_ON_ERROR);
 
-        $this->assertSame('price', $changes[0]['field']);
-        $this->assertNull($changes[0]['old']);
-        $this->assertSame(9.99, $changes[0]['new']);
+        Assert::same($changes[0]['field'], 'price');
+        Assert::null($changes[0]['old']);
+        Assert::same($changes[0]['new'], 9.99);
     }
 }

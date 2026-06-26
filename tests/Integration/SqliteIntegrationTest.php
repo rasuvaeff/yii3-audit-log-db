@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace Rasuvaeff\Yii3AuditLogDb\Tests\Integration;
 
 use DateTimeImmutable;
-use PHPUnit\Framework\Attributes\CoversNothing;
-use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
 use Psr\Clock\ClockInterface;
 use Rasuvaeff\Yii3AuditLog\AuditActor;
 use Rasuvaeff\Yii3AuditLog\AuditChangeSet;
@@ -16,6 +13,11 @@ use Rasuvaeff\Yii3AuditLog\AuditLogger;
 use Rasuvaeff\Yii3AuditLog\AuditMetadata;
 use Rasuvaeff\Yii3AuditLog\AuditSubject;
 use Rasuvaeff\Yii3AuditLogDb\DbAuditWriter;
+use Testo\Assert;
+use Testo\Codecov\CoversNothing;
+use Testo\Lifecycle\AfterTest;
+use Testo\Lifecycle\BeforeTest;
+use Testo\Test;
 use Yiisoft\Db\Cache\SchemaCache;
 use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Db\Query\Query;
@@ -24,13 +26,14 @@ use Yiisoft\Db\Sqlite\Driver as SqliteDriver;
 use Yiisoft\Test\Support\Clock\StaticClock;
 use Yiisoft\Test\Support\SimpleCache\MemorySimpleCache;
 
+#[Test]
 #[CoversNothing]
-final class SqliteIntegrationTest extends TestCase
+final class SqliteIntegrationTest
 {
     private ConnectionInterface $db;
 
-    #[\Override]
-    protected function setUp(): void
+    #[BeforeTest]
+    public function setUp(): void
     {
         $driver = new SqliteDriver(dsn: 'sqlite::memory:');
         $schemaCache = new SchemaCache(psrCache: new MemorySimpleCache());
@@ -39,13 +42,12 @@ final class SqliteIntegrationTest extends TestCase
         $this->createTable();
     }
 
-    #[\Override]
-    protected function tearDown(): void
+    #[AfterTest]
+    public function tearDown(): void
     {
         $this->db->close();
     }
 
-    #[Test]
     public function writesEventToDatabase(): void
     {
         $writer = new DbAuditWriter(db: $this->db);
@@ -54,11 +56,10 @@ final class SqliteIntegrationTest extends TestCase
         $writer->write(event: $event);
 
         $rows = (new Query($this->db))->from('audit_log')->all();
-        $this->assertCount(1, $rows);
-        $this->assertSame('ev-001', $rows[0]['id']);
+        Assert::count($rows, 1);
+        Assert::same($rows[0]['id'], 'ev-001');
     }
 
-    #[Test]
     public function persistsAllScalarColumns(): void
     {
         $writer = new DbAuditWriter(db: $this->db);
@@ -75,20 +76,19 @@ final class SqliteIntegrationTest extends TestCase
         $writer->write(event: $event);
 
         $row = (new Query($this->db))->from('audit_log')->where(['id' => 'ev-002'])->one();
-        $this->assertNotNull($row);
-        $this->assertSame('user', $row['actor_type']);
-        $this->assertSame('u1', $row['actor_id']);
-        $this->assertSame('Alice', $row['actor_name']);
-        $this->assertSame('update', $row['action']);
-        $this->assertSame('order', $row['subject_type']);
-        $this->assertSame('42', $row['subject_id']);
-        $this->assertSame('2026-06-20 10:00:00', $row['occurred_at']);
-        $this->assertSame('req-1', $row['request_id']);
-        $this->assertSame('192.168.1.1', $row['ip']);
-        $this->assertSame('Agent/1', $row['user_agent']);
+        Assert::notNull($row);
+        Assert::same($row['actor_type'], 'user');
+        Assert::same($row['actor_id'], 'u1');
+        Assert::same($row['actor_name'], 'Alice');
+        Assert::same($row['action'], 'update');
+        Assert::same($row['subject_type'], 'order');
+        Assert::same($row['subject_id'], '42');
+        Assert::same($row['occurred_at'], '2026-06-20 10:00:00');
+        Assert::same($row['request_id'], 'req-1');
+        Assert::same($row['ip'], '192.168.1.1');
+        Assert::same($row['user_agent'], 'Agent/1');
     }
 
-    #[Test]
     public function persistsChangesAsJson(): void
     {
         $writer = new DbAuditWriter(db: $this->db);
@@ -107,16 +107,15 @@ final class SqliteIntegrationTest extends TestCase
         $writer->write(event: $event);
 
         $row = (new Query($this->db))->from('audit_log')->where(['id' => 'ev-003'])->one();
-        $this->assertNotNull($row);
+        Assert::notNull($row);
         /** @var list<array{field: string, old: mixed, new: mixed}> $changes */
         $changes = json_decode((string) $row['changes'], associative: true, flags: JSON_THROW_ON_ERROR);
-        $this->assertCount(1, $changes);
-        $this->assertSame('status', $changes[0]['field']);
-        $this->assertSame('active', $changes[0]['old']);
-        $this->assertSame('banned', $changes[0]['new']);
+        Assert::count($changes, 1);
+        Assert::same($changes[0]['field'], 'status');
+        Assert::same($changes[0]['old'], 'active');
+        Assert::same($changes[0]['new'], 'banned');
     }
 
-    #[Test]
     public function persistsSystemActorWithNullIds(): void
     {
         $writer = new DbAuditWriter(db: $this->db);
@@ -132,13 +131,12 @@ final class SqliteIntegrationTest extends TestCase
         $writer->write(event: $event);
 
         $row = (new Query($this->db))->from('audit_log')->where(['id' => 'ev-004'])->one();
-        $this->assertNotNull($row);
-        $this->assertSame('system', $row['actor_type']);
-        $this->assertNull($row['actor_id']);
-        $this->assertNull($row['actor_name']);
+        Assert::notNull($row);
+        Assert::same($row['actor_type'], 'system');
+        Assert::null($row['actor_id']);
+        Assert::null($row['actor_name']);
     }
 
-    #[Test]
     public function persistsNullMetadataColumnsAsNull(): void
     {
         $writer = new DbAuditWriter(db: $this->db);
@@ -154,13 +152,12 @@ final class SqliteIntegrationTest extends TestCase
         $writer->write(event: $event);
 
         $row = (new Query($this->db))->from('audit_log')->where(['id' => 'ev-005'])->one();
-        $this->assertNotNull($row);
-        $this->assertNull($row['request_id']);
-        $this->assertNull($row['ip']);
-        $this->assertNull($row['user_agent']);
+        Assert::notNull($row);
+        Assert::null($row['request_id']);
+        Assert::null($row['ip']);
+        Assert::null($row['user_agent']);
     }
 
-    #[Test]
     public function writesMultipleEventsIndependently(): void
     {
         $writer = new DbAuditWriter(db: $this->db);
@@ -170,10 +167,9 @@ final class SqliteIntegrationTest extends TestCase
         $writer->write(event: $this->event(id: 'c'));
 
         $count = (new Query($this->db))->from('audit_log')->count();
-        $this->assertSame(3, (int) $count);
+        Assert::same((int) $count, 3);
     }
 
-    #[Test]
     public function auditLoggerIntegration(): void
     {
         $writer = new DbAuditWriter(db: $this->db);
@@ -192,10 +188,9 @@ final class SqliteIntegrationTest extends TestCase
         );
 
         $count = (new Query($this->db))->from('audit_log')->count();
-        $this->assertSame(1, (int) $count);
+        Assert::same((int) $count, 1);
     }
 
-    #[Test]
     public function supportsCustomTableName(): void
     {
         $this->db->createCommand(sql: 'CREATE TABLE custom_audit (id VARCHAR(32) PRIMARY KEY, actor_type VARCHAR(32) NOT NULL, actor_id VARCHAR(255), actor_name VARCHAR(255), action VARCHAR(64) NOT NULL, subject_type VARCHAR(255) NOT NULL, subject_id VARCHAR(255) NOT NULL, changes TEXT NOT NULL, occurred_at VARCHAR(30) NOT NULL, request_id VARCHAR(255), ip VARCHAR(45), user_agent TEXT)')->execute();
@@ -204,7 +199,7 @@ final class SqliteIntegrationTest extends TestCase
         $writer->write(event: $this->event(id: 'custom-1'));
 
         $count = (new Query($this->db))->from('custom_audit')->count();
-        $this->assertSame(1, (int) $count);
+        Assert::same((int) $count, 1);
     }
 
     private function event(string $id = 'ev-1'): AuditEvent
