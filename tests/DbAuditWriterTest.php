@@ -22,6 +22,16 @@ final class DbAuditWriterTest
         Assert::instanceOf($writer, DbAuditWriter::class);
     }
 
+    public function exceptionMessageContainsInvalidTableName(): void
+    {
+        try {
+            new DbAuditWriter(db: new FakeConnection(), table: '0invalid');
+            Assert::fail('Expected InvalidArgumentException');
+        } catch (\InvalidArgumentException $e) {
+            Assert::string($e->getMessage())->contains('"0invalid"');
+        }
+    }
+
     public function acceptsCustomTableName(): void
     {
         $writer = new DbAuditWriter(

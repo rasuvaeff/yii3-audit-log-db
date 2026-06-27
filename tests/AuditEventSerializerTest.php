@@ -157,6 +157,7 @@ final class AuditEventSerializerTest
         $changes = json_decode((string) $row['changes'], associative: true, flags: JSON_THROW_ON_ERROR);
 
         Assert::same($changes[0]['field'], 'price');
+        Assert::true(array_key_exists('old', $changes[0]));
         Assert::null($changes[0]['old']);
         Assert::same($changes[0]['new'], 9.99);
     }
