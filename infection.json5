@@ -7,10 +7,10 @@
         "text": "php://stderr",
         "summary": "build/infection-summary.log"
     },
-    "phpUnit": {
-        "configDir": "."
-    },
-    "minMsi": 92,
+    "testFramework": "testo",
+    // 1 equivalent mutant: AuditEventSerializer::utc() AssignCoalesce (??= → =)
+    // always returns DateTimeZone('UTC') either way — caching is unobservable.
+    "minMsi": 96,
     "mutators": {
         "@default": true
     }

@@ -5,55 +5,58 @@ declare(strict_types=1);
 namespace Rasuvaeff\Yii3AuditLogDb\Tests;
 
 use InvalidArgumentException;
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
 use Rasuvaeff\Yii3AuditLogDb\DbAuditWriter;
-use Yiisoft\Db\Connection\ConnectionInterface;
+use Testo\Assert;
+use Testo\Codecov\Covers;
+use Testo\Data\DataProvider;
+use Testo\Expect;
+use Testo\Test;
 
-#[CoversClass(DbAuditWriter::class)]
-final class DbAuditWriterTest extends TestCase
+#[Test]
+#[Covers(DbAuditWriter::class)]
+final class DbAuditWriterTest
 {
-    #[Test]
     public function acceptsDefaultTableName(): void
     {
-        $writer = new DbAuditWriter(db: $this->createStub(ConnectionInterface::class));
-
-        $this->assertInstanceOf(DbAuditWriter::class, $writer);
+        $writer = new DbAuditWriter(db: new FakeConnection());
+        Assert::instanceOf($writer, DbAuditWriter::class);
     }
 
-    #[Test]
+    public function exceptionMessageContainsInvalidTableName(): void
+    {
+        try {
+            new DbAuditWriter(db: new FakeConnection(), table: '0invalid');
+            Assert::fail('Expected InvalidArgumentException');
+        } catch (\InvalidArgumentException $e) {
+            Assert::string($e->getMessage())->contains('"0invalid"');
+        }
+    }
+
     public function acceptsCustomTableName(): void
     {
         $writer = new DbAuditWriter(
-            db: $this->createStub(ConnectionInterface::class),
+            db: new FakeConnection(),
             table: 'my_audit_log',
         );
-
-        $this->assertInstanceOf(DbAuditWriter::class, $writer);
+        Assert::instanceOf($writer, DbAuditWriter::class);
     }
 
-    #[Test]
     public function acceptsSchemaQualifiedTableName(): void
     {
         $writer = new DbAuditWriter(
-            db: $this->createStub(ConnectionInterface::class),
+            db: new FakeConnection(),
             table: 'public.audit_log',
         );
-
-        $this->assertInstanceOf(DbAuditWriter::class, $writer);
+        Assert::instanceOf($writer, DbAuditWriter::class);
     }
 
-    #[Test]
     #[DataProvider('invalidTableNameProvider')]
     public function throwsOnInvalidTableName(string $table): void
     {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Invalid table name "' . $table . '"');
+        Expect::exception(InvalidArgumentException::class);
 
         new DbAuditWriter(
-            db: $this->createStub(ConnectionInterface::class),
+            db: new FakeConnection(),
             table: $table,
         );
     }
