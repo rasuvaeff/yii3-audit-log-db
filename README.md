@@ -7,6 +7,7 @@
 [![Psalm Level](https://shepherd.dev/github/rasuvaeff/yii3-audit-log-db/level.svg)](https://shepherd.dev/github/rasuvaeff/yii3-audit-log-db)
 [![PHP](https://img.shields.io/packagist/dependency-v/rasuvaeff/yii3-audit-log-db/php)](https://packagist.org/packages/rasuvaeff/yii3-audit-log-db)
 [![License](https://poser.pugx.org/rasuvaeff/yii3-audit-log-db/license)](https://packagist.org/packages/rasuvaeff/yii3-audit-log-db)
+[Русская версия](README.ru.md)
 
 Database-backed `AuditWriter` for [`rasuvaeff/yii3-audit-log`](https://github.com/rasuvaeff/yii3-audit-log).
 Persists audit events to any `yiisoft/db`-compatible database (SQLite, MySQL, PostgreSQL, etc.).
