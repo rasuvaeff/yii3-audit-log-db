@@ -160,6 +160,27 @@ $writer->write(event: $auditEvent);
 
 Запускаемые скрипты — см. [`examples/`](examples/).
 
+### Анализаторы зависимостей
+
+Это leaf-пакет, который root-приложение выбирает через config-plugin, поэтому в
+autoloaded source может законно не быть прямой ссылки на его классы. Сохраняйте
+direct dependency: backend или bridge выбирает приложение, а не core-пакет.
+Исключение Composer Dependency Analyser должно быть ограничено этим пакетом:
+
+```php
+use ShipMonk\ComposerDependencyAnalyser\Config\Configuration;
+use ShipMonk\ComposerDependencyAnalyser\Config\ErrorType;
+
+return (new Configuration())->ignoreErrorsOnPackage(
+    'rasuvaeff/yii3-audit-log-db',
+    [ErrorType::UNUSED_DEPENDENCY],
+);
+```
+
+`composer-require-checker` ищет используемые, но не объявленные symbols, а не
+unused packages, поэтому для такой config-only зависимости suppression ему не
+нужен.
+
 ## Разработка
 
 ```bash
