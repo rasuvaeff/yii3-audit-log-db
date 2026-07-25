@@ -28,13 +28,49 @@ composer require rasuvaeff/yii3-audit-log rasuvaeff/yii3-audit-log-db
 
 ## Migration
 
-Run the bundled migration to create the `audit_log` table:
+Register the bundled migration **by namespace** — no vendor paths:
 
 ```php
-// Register the migration in your migration runner:
-// migrations/M260620000000CreateAuditLogTable.php
-// from vendor/rasuvaeff/yii3-audit-log-db/migrations/
+// config/common/di/migration.php
+use Yiisoft\Db\Migration\Service\MigrationService;
+
+return [
+    MigrationService::class => [
+        'setSourceNamespaces()' => [[
+            'App\\Migration',
+            'Rasuvaeff\\Yii3AuditLogDb\\Migration',
+        ]],
+    ],
+];
 ```
+
+```bash
+./yii migrate:up
+```
+
+### Custom table name
+
+Set it in params — the same value reaches the migration **and** the writer:
+
+```php
+// config/common/params.php
+'rasuvaeff/yii3-audit-log-db' => [
+    'table' => 'my_audit_log',
+    'table_prefix' => '',      // prepended to `table`; e.g. 'rsv_' → rsv_my_audit_log
+],
+```
+
+Index names follow the table name (`idx_my_audit_log_subject`, …), so two
+installations can share one PostgreSQL schema — index names are unique per
+schema there, not per table.
+
+> **Do not configure the migration through the DI container.**
+> `M...::class => ['__construct()' => ['table' => ...]]` does not work: the
+> migration is built by `Injector::make()`, which resolves arguments by type
+> and never reads a container definition keyed by the migration's own class.
+> Worse, adding that definition makes the container fatal at build time in
+> **every** request, because the class is not autoloadable until the migration
+> runner requires it. That recipe was documented in 1.x; it never worked.
 
 The migration creates:
 

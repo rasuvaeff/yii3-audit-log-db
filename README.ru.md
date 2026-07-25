@@ -30,13 +30,49 @@ composer require rasuvaeff/yii3-audit-log rasuvaeff/yii3-audit-log-db
 
 ## Миграция
 
-Примените поставляемую миграцию, чтобы создать таблицу `audit_log`:
+Регистрируйте поставляемую миграцию **по namespace** — без путей в `vendor/`:
 
 ```php
-// Register the migration in your migration runner:
-// migrations/M260620000000CreateAuditLogTable.php
-// from vendor/rasuvaeff/yii3-audit-log-db/migrations/
+// config/common/di/migration.php
+use Yiisoft\Db\Migration\Service\MigrationService;
+
+return [
+    MigrationService::class => [
+        'setSourceNamespaces()' => [[
+            'App\\Migration',
+            'Rasuvaeff\\Yii3AuditLogDb\\Migration',
+        ]],
+    ],
+];
 ```
+
+```bash
+./yii migrate:up
+```
+
+### Своё имя таблицы
+
+Задаётся в params — то же значение получают и миграция, и writer:
+
+```php
+// config/common/params.php
+'rasuvaeff/yii3-audit-log-db' => [
+    'table' => 'my_audit_log',
+    'table_prefix' => '',      // добавляется перед `table`; например 'rsv_' → rsv_my_audit_log
+],
+```
+
+Имена индексов следуют за именем таблицы (`idx_my_audit_log_subject`, …),
+поэтому две инсталляции могут делить одну схему PostgreSQL — там имена индексов
+уникальны в пределах схемы, а не таблицы.
+
+> **Не настраивайте миграцию через DI-контейнер.**
+> `M...::class => ['__construct()' => ['table' => ...]]` не работает: миграцию
+> создаёт `Injector::make()`, который резолвит аргументы по типу и никогда не
+> читает определение контейнера по имени класса самой миграции. Хуже того,
+> добавление такого определения роняет контейнер на этапе сборки в **каждом**
+> запросе, потому что класс не автозагружается, пока его не подключит раннер
+> миграций. Этот рецепт был описан в 1.x и никогда не работал.
 
 Миграция создаёт:
 

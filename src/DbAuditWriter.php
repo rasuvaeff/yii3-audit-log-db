@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Rasuvaeff\Yii3AuditLogDb;
 
-use InvalidArgumentException;
 use Rasuvaeff\Yii3AuditLog\AuditEvent;
 use Rasuvaeff\Yii3AuditLog\AuditWriter;
 use Yiisoft\Db\Connection\ConnectionInterface;
@@ -14,18 +13,20 @@ use Yiisoft\Db\Connection\ConnectionInterface;
  */
 final readonly class DbAuditWriter implements AuditWriter
 {
-    private const string TABLE_PATTERN = '/^[A-Za-z_]\w*(\.[A-Za-z_]\w*)?$/';
+    private string $table;
 
     /**
      * @param non-empty-string $table
+     *
+     * @throws \InvalidArgumentException when the name is not a valid identifier
      */
     public function __construct(
         private ConnectionInterface $db,
-        private string $table = 'audit_log',
+        string $table = 'audit_log',
     ) {
-        if (preg_match(self::TABLE_PATTERN, $table) !== 1) {
-            throw new InvalidArgumentException('Invalid table name "' . $table . '"');
-        }
+        // validation lives in the value object, so the writer and the bundled
+        // migration cannot disagree about what a valid table name is
+        $this->table = (new AuditLogTableName($table))->value;
     }
 
     #[\Override]
