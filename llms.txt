@@ -14,7 +14,8 @@ composer require rasuvaeff/yii3-audit-log rasuvaeff/yii3-audit-log-db
 - `changes` column: JSON array `[{"field":"x","old":…,"new":…}]`.
 - `occurred_at` stored as `Y-m-d H:i:s` UTC regardless of input timezone.
 - Table name validated: `/^[A-Za-z_]\w*(\.[A-Za-z_]\w*)?$/`.
-- Must run migration `M260620000000CreateAuditLogTable` before first write.
+- Must run migration `Rasuvaeff\Yii3AuditLogDb\Migration\M260620000000CreateAuditLogTable` before first write (namespaced since 2.0).
+- Table name flows params → `AuditLogTableName` (VO) → both the writer and the migration. Index names are derived from it (`idx_<table>_subject`, …).
 
 ## API reference
 
@@ -34,13 +35,15 @@ $writer->write(event: $auditEvent);  // implements AuditWriter
 ### Migration
 
 ```php
-// Register in your migration runner:
-// vendor/rasuvaeff/yii3-audit-log-db/migrations/M260620000000CreateAuditLogTable.php
-
-// Custom table name:
-M260620000000CreateAuditLogTable::class => [
-    '__construct()' => ['table' => 'my_audit_log'],
+// Register BY NAMESPACE (class is Rasuvaeff\Yii3AuditLogDb\Migration\M260620000000CreateAuditLogTable):
+MigrationService::class => [
+    'setSourceNamespaces()' => [['App\\Migration', 'Rasuvaeff\\Yii3AuditLogDb\\Migration']],
 ],
+
+// Custom table name: params only. Configuring the migration through the
+// container does NOT work (Injector::make() resolves by type, not by class-id)
+// and adding such a definition fatals the container on every request.
+'rasuvaeff/yii3-audit-log-db' => ['table' => 'my_audit_log', 'table_prefix' => ''],
 ```
 
 ### Config-plugin params

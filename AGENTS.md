@@ -13,14 +13,13 @@ Namespace: `Rasuvaeff\Yii3AuditLogDb`.
 
 Public API:
 - `DbAuditWriter` — implements `AuditWriter`; constructor accepts `ConnectionInterface $db`
-  and optional `string $table = 'audit_log'` (validated against identifier regex).
+  and optional `string $table = 'audit_log'` (validated by `AuditLogTableName`).
+- `AuditLogTableName` — the table name as a type; also derives the index-name base.
+- `Migration\M260620000000CreateAuditLogTable` — creates the table with
+  subject/actor/occurred_at indexes; takes `AuditLogTableName`.
 
 Internal:
 - `AuditEventSerializer` — maps `AuditEvent` → row array; `changes` column is JSON.
-
-Migration:
-- `migrations/M260620000000CreateAuditLogTable.php` — creates `audit_log` with
-  subject/actor/occurred_at indexes; accepts custom table name via constructor.
 
 ## Golden rules
 
@@ -64,8 +63,30 @@ make release-check
 - `changes` column stores a JSON array: `[{"field":"x","old":…,"new":…}]`. Old/new
   can be any JSON-encodable value including `null`.
 - `occurred_at` is stored as `Y-m-d H:i:s` UTC regardless of the input timezone.
-- Table name validated against `/^[A-Za-z_]\w*(\.[A-Za-z_]\w*)?$/`; schema-qualified
-  names like `public.audit_log` are allowed.
+- **The table name is a VO, not a string, because `Injector` cannot resolve a
+  scalar.** `yiisoft/db-migration` builds migrations via `Injector::make()`,
+  which resolves arguments by name or by type from the container and never reads
+  a container definition keyed by the migration's own class. That is why the
+  1.x recipe `M...::class => ['__construct()' => ['table' => …]]` silently did
+  nothing — and why adding it made `Yiisoft\Di\Container` fatal at build time
+  (the global class was not autoloadable until the runner required the file).
+  Never reintroduce a scalar `string $table` on a migration.
+- **One source of truth for the name.** `config/di.php` builds
+  `AuditLogTableName` from `table_prefix` + `table` params and passes it to both
+  the writer and the migration. In 1.x the writer read params while the
+  migration used its own default, so configuring params produced a writer
+  pointing at a table the migration had never created.
+- **Index names are derived from the table name** (`idx_<table>_subject`, …),
+  with `.` flattened to `_`. In PostgreSQL index names are unique per schema,
+  not per table, so hard-coded names collide between two installations sharing
+  a schema.
+- Table name validated against `/^[A-Za-z_]\w*(\.[A-Za-z_]\w*)?\z/` — `\z`,
+  not `$`: PCRE's `$` also matches before a trailing newline, so `"audit_log\n"`
+  passed the 1.x check. Schema-qualified names like `public.audit_log` are allowed.
+- Migrations live in `src/Migration/` and are therefore covered by cs, psalm and
+  infection like any other source file. `MigrationTableNameTest` asserts the
+  column set and each index's columns — without that, `ArrayItemRemoval` mutants
+  in `createTable`/`createIndex` escape and the MSI gate fails.
 - DI rule: this package binds `AuditWriter::class` → `DbAuditWriter`. Never bind it
   in the core package (`yii3-audit-log`). Two backends active simultaneously would
   trigger a Duplicate key error from `yiisoft/config`.
