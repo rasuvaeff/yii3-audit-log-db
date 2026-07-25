@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2.0.1 — 2026-07-25
+
+- Document the exact Composer Dependency Analyser exclusion required when this
+  package is consumed only through yiisoft/config metadata.
+
 ## 2.0.0 — 2026-07-25
 
 **Breaking.** See [UPGRADE.md](UPGRADE.md) — an installation that already
@@ -48,4 +53,3 @@ applied the migration must rewrite one row in the `migration` table.
 - `AuditEventSerializer` — internal serializer: maps `AuditEvent` fields to a DB row array.
 - Migration `M260620000000CreateAuditLogTable` with subject/actor/occurred_at indexes.
 - Yii3 config-plugin wiring: binds `AuditWriter` to `DbAuditWriter`.
-
