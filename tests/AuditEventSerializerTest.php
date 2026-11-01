@@ -46,6 +46,26 @@ final class AuditEventSerializerTest
         Assert::same($row['user_agent'], 'Test/1.0');
     }
 
+    public function theUtcZoneIsCreatedOnceAndReused(): void
+    {
+        $event = new AuditEvent(
+            id: 'abc123',
+            actor: AuditActor::system(),
+            action: 'update',
+            subject: AuditSubject::of(type: 'order', id: '42'),
+            changeSet: AuditChangeSet::empty(),
+            occurredAt: new DateTimeImmutable('2026-06-20 10:00:00 UTC'),
+        );
+        $property = new \ReflectionProperty(AuditEventSerializer::class, 'utc');
+
+        AuditEventSerializer::serialize(event: $event);
+        $first = $property->getValue();
+        AuditEventSerializer::serialize(event: $event);
+
+        Assert::instanceOf($first, \DateTimeZone::class);
+        Assert::same($property->getValue(), $first);
+    }
+
     public function serializesChangesAsJsonArray(): void
     {
         $event = new AuditEvent(
